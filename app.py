@@ -157,8 +157,17 @@ st.markdown("---")
 if 'history' not in st.session_state:
     st.session_state.history = []
 
+# 默认符号
 x = sp.symbols('x')
 x_y, y_y, z_y = sp.symbols('x y z')
+
+# 自定义变量映射
+def get_var(var_str, expr_str=""):
+    """获取符号变量，支持自定义变量名"""
+    try:
+        return sp.symbols(var_str)
+    except:
+        return sp.symbols('x')
 
 # ==================== AI 调用 ====================
 def ai_explain(expression, result, context=""):
@@ -282,6 +291,45 @@ if func_type == "极限计算":
             
         except Exception as e:
             st.error(f"出错：{e}")
+elif func_type == "极限计算":
+    st.header("极限计算")
+    
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        expr_input = st.text_input("函数表达式", "sin(t)/t")
+    with col2:
+        var_name = st.text_input("自变量", "t", help="例如：t, y, theta")
+    with col3:
+        limit_point = st.number_input("趋近值", value=0.0, step=0.5)
+    
+    limit_sub = st.radio("类型", ["双侧极限", "左极限", "右极限"], horizontal=True)
+    symbol_help()
+    
+    if st.button("计算极限"):
+        try:
+            var = sp.symbols(var_name)
+            expr = sp.sympify(expr_input)
+            if limit_sub == "左极限":
+                res = sp.limit(expr, var, limit_point, dir='-')
+            elif limit_sub == "右极限":
+                res = sp.limit(expr, var, limit_point, dir='+')
+            else:
+                res = sp.limit(expr, var, limit_point)
+            
+            st.success(f"结果：{res}")
+            st.latex(f"\\lim_{{{var_name} \\to {limit_point}}} {sp.latex(expr)} = {sp.latex(res)}")
+            
+            st.session_state.history.append({
+                "功能": f"极限({var_name}→{limit_point})", "输入": expr_input, "结果": str(res)
+            })
+            
+            with st.spinner("AI解读中..."):
+                explanation = ai_explain(expr_input, str(res), f"极限，{var_name}→{limit_point}")
+            show_ai(explanation)
+            
+        except Exception as e:
+            st.error(f"出错：{e}")
+
 
 # ==================== 导数计算 ====================
 elif func_type == "导数计算":
@@ -320,7 +368,16 @@ elif func_type == "导数计算":
             
         except Exception as e:
             st.error(f"出错：{e}")
-
+elif func_type == "导数计算":
+    st.header("导数计算")
+    
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        expr_input = st.text_input("函数表达式", "t**2*sin(t)")
+    with col2:
+        var_name = st.text_input("自变量", "t")
+    with col3:
+        order = st.number_input("阶数", min_value=1, max_value=10, value=1)
 # ==================== 积分计算 ====================
 elif func_type == "积分计算":
     st.header("积分计算")
@@ -471,6 +528,14 @@ elif func_type == "函数可视化":
             })
         except Exception as e:
             st.error(f"出错：{e}")
+elif func_type == "函数可视化":
+    st.header("函数图像")
+    
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        expr_input = st.text_input("函数", "sin(t)*cos(t)")
+    with col2:
+        var_name = st.text_input("自变量", "t")
 
 # ==================== 知识点讲解 ====================
 elif func_type == "知识点讲解":
