@@ -1,3 +1,5 @@
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 import streamlit as st
 import streamlit.components.v1 as components
 import sympy as sp
@@ -9,7 +11,7 @@ import requests
 st.set_page_config(page_title="数学分析智能助手", page_icon="📐", layout="wide")
 
 import os
-ZHIPU_API_KEY = os.environ.get("ZHIPU_API_KEY", "")
+ZHIPU_API_KEY = os.environ.get("ZHIPU_API_KEY", "你的新API_KEY")
 
 # ==================== 全局样式 ====================
 st.markdown("""
@@ -425,7 +427,7 @@ def ai_explain(expression, result, context=""):
 结果：{result}
 模块：{context}
 
-要求：精炼专业，100字左右。公式必须用单个$包裹，如 $f'(x)$，绝对不要用$$或\\[\\]"""
+要求：精炼专业，100字左右。公式必须用单个$包裹，如 $f'(x)$，绝对不要用$$或\\[\\]。不要使用任何表情符号。"""
     
     try:
         response = requests.post(
@@ -437,14 +439,16 @@ def ai_explain(expression, result, context=""):
             json={
                 "model": "glm-4-flash",
                 "messages": [
-                    {"role": "system", "content": "你是数学教授。公式严格用单个$包裹。禁止用$$或\\[\\]。"},
+                    {"role": "system", "content": "你是数学教授。公式严格用单个$包裹。禁止用$$或\\[\\]。禁止使用emoji。"},
                     {"role": "user", "content": prompt}
                 ],
                 "max_tokens": 300
             },
-            timeout=15
+            timeout=60
         )
-        data = response.json()
+        # 关键：直接取 bytes 再手动 decode，跳过 requests 的自动编码
+        raw = response.content
+        data = json.loads(raw.decode('utf-8'))
         if "choices" in data:
             return data["choices"][0]["message"]["content"]
         else:
@@ -454,11 +458,16 @@ def ai_explain(expression, result, context=""):
 
 def show_ai(text):
     """用 st.markdown 显示 AI 结果，渲染 $...$ 公式"""
-    # 转换 \[ \] 为 $ $（单行公式）
-    text = text.replace("\\[", "$").replace("\\]", "$")
-    # 转换 \( \) 为 $ $
-    text = text.replace("\\(", "$").replace("\\)", "$")
-    st.markdown(text)
+    # 暴力移除所有可能导致 latin-1 编码错误的字符
+    # 只保留 ASCII 字符和中文汉字
+    cleaned = ""
+    for ch in text:
+        if ord(ch) < 128 or '\u4e00' <= ch <= '\u9fff' or ch in '，。！？；：“”‘’（）【】《》…—\n':
+            cleaned += ch
+    # 转换公式格式
+    cleaned = cleaned.replace("\\[", "$").replace("\\]", "$")
+    cleaned = cleaned.replace("\\(", "$").replace("\\)", "$")
+    st.text(cleaned)
 
 # ==================== 符号帮助 ====================
 def symbol_help():
@@ -943,21 +952,24 @@ elif func_type == "知识点讲解":
     with tab2:
         question = st.text_area("输入问题", placeholder="例：Riemann积分与Lebesgue积分的区别？")
         if st.button("提问") and question:
-                        with st.spinner("回复中..."):
-                            resp = requests.post(
+            with st.spinner("回复中..."):
+                resp = requests.post(
                     "https://open.bigmodel.cn/api/paas/v4/chat/completions",
                     headers={"Authorization": f"Bearer {ZHIPU_API_KEY}", "Content-Type": "application/json"},
                     json={
                         "model": "glm-4-flash",
                         "messages": [
-                            {"role": "system", "content": "你是数学分析教授。公式用 $...$ 格式，不要用 $$ 或 \\[ \\]。"},
+                            {"role": "system", "content": "你是数学分析教授。公式用 $...$ 格式。禁止使用emoji。"},
                             {"role": "user", "content": question}
                         ],
                         "max_tokens": 400,
                         "temperature": 0.7
                     }, timeout=60
                 )
-                        answer = resp.json()["choices"][0]["message"]["content"]
+                raw = resp.content
+                data = json.loads(raw.decode('utf-8'))
+                answer = data["choices"][0]["message"]["content"]
+                show_ai(answer)
 st.markdown("---")
 st.markdown("<p style='text-align:center;color:#999;'>数学分析智能助手 · Sympy + 智谱AI</p>", unsafe_allow_html=True)
 inject_background_effect()
