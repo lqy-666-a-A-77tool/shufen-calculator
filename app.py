@@ -6,6 +6,7 @@ import sympy as sp
 import matplotlib.pyplot as plt
 import numpy as np
 import requests
+import json
 
 # ==================== 页面配置 ====================
 st.set_page_config(page_title="数学分析智能助手", page_icon="📐", layout="wide")
