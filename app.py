@@ -335,49 +335,87 @@ elif func_type == "极限计算":
 elif func_type == "导数计算":
     st.header("导数计算")
     
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        expr_input = st.text_input("函数表达式", "x**2*sin(x)")
-    with col2:
-        order = st.number_input("阶数", min_value=1, max_value=10, value=1)
+    deriv_sub = st.radio("求导类型", ["一元函数导数", "偏导数"], horizontal=True)
     
-    symbol_help()
+    if deriv_sub == "一元函数导数":
+        col1, col2, col3 = st.columns([2, 1, 1])
+        with col1:
+            expr_input = st.text_input("函数表达式", "t**2*sin(t)")
+        with col2:
+            var_name = st.text_input("自变量", "t")
+        with col3:
+            order = st.number_input("阶数", min_value=1, max_value=10, value=1)
+        
+        symbol_help()
+        
+        if st.button("计算导数"):
+            try:
+                var = sp.symbols(var_name)
+                expr = sp.sympify(expr_input)
+                res = sp.diff(expr, var, order)
+                
+                st.success(f"{order}阶导数：")
+                st.latex(f"\\frac{{d^{order} f}}{{d{var_name}^{order}}} = {sp.latex(res)}")
+                
+                with st.expander("求导过程"):
+                    curr = expr
+                    st.latex(f"f({var_name}) = {sp.latex(curr)}")
+                    for i in range(1, order+1):
+                        curr = sp.diff(curr, var)
+                        st.latex(f"f^{{({i})}}({var_name}) = {sp.latex(curr)}")
+                
+                st.session_state.history.append({
+                    "功能": f"{order}阶导数", "输入": expr_input, "结果": str(res)
+                })
+                
+                with st.spinner("AI解读中..."):
+                    explanation = ai_explain(expr_input, str(res), f"{order}阶导数")
+                show_ai(explanation)
+                
+            except Exception as e:
+                st.error(f"出错：{e}")
     
-    if st.button("计算导数"):
-        try:
-            expr = sp.sympify(expr_input)
-            res = sp.diff(expr, x, order)
-            
-            st.success(f"{order}阶导数：")
-            st.latex(f"f^{{({order})}}(x) = {sp.latex(res)}")
-            
-            with st.expander("求导过程"):
-                curr = expr
-                st.latex(f"f(x) = {sp.latex(curr)}")
-                for i in range(1, order+1):
-                    curr = sp.diff(curr, x)
-                    st.latex(f"f^{{({i})}}(x) = {sp.latex(curr)}")
-            
-            st.session_state.history.append({
-                "功能": f"{order}阶导数", "输入": expr_input, "结果": str(res)
-            })
-            
-            with st.spinner("AI解读中..."):
-                explanation = ai_explain(expr_input, str(res), f"{order}阶导数")
-            show_ai(explanation)
-            
-        except Exception as e:
-            st.error(f"出错：{e}")
-elif func_type == "导数计算":
-    st.header("导数计算")
-    
-    col1, col2, col3 = st.columns([2, 1, 1])
-    with col1:
-        expr_input = st.text_input("函数表达式", "t**2*sin(t)")
-    with col2:
-        var_name = st.text_input("自变量", "t")
-    with col3:
-        order = st.number_input("阶数", min_value=1, max_value=10, value=1)
+    else:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            expr_input = st.text_input("多元函数", "x**2*y + y**3")
+        with col2:
+            order1 = st.number_input("对变量1的阶数", min_value=1, max_value=5, value=1)
+        
+        col1, col2, col3 = st.columns([2, 2, 1])
+        with col1:
+            var1 = st.text_input("变量1", "x")
+        with col2:
+            var2 = st.text_input("变量2（留空=纯偏导）", "", help="填了就是混合偏导，先对变量1求导再对变量2求导")
+        with col3:
+            if var2.strip():
+                order2 = st.number_input("变量2阶数", min_value=1, max_value=5, value=1)
+        
+        if st.button("计算偏导数"):
+            try:
+                expr = sp.sympify(expr_input)
+                v1 = sp.symbols(var1)
+                res = sp.diff(expr, v1, order1)
+                
+                if var2.strip():
+                    v2 = sp.symbols(var2)
+                    res = sp.diff(res, v2, order2)
+                    st.success(f"混合偏导：∂^({order1}+{order2})f / ∂{var1}^{order1}∂{var2}^{order2}")
+                else:
+                    st.success(f"偏导数：∂^{order1}f / ∂{var1}^{order1}")
+                
+                st.latex(sp.latex(res))
+                
+                st.session_state.history.append({
+                    "功能": "偏导数", "输入": expr_input, "结果": str(res)
+                })
+                
+                with st.spinner("AI解读中..."):
+                    explanation = ai_explain(expr_input, str(res), "偏导数")
+                show_ai(explanation)
+                
+            except Exception as e:
+                st.error(f"出错：{e}")
 # ==================== 积分计算 ====================
 elif func_type == "积分计算":
     st.header("积分计算")
@@ -501,25 +539,34 @@ elif func_type == "积分计算":
 elif func_type == "函数可视化":
     st.header("函数图像")
     
-    expr_input = st.text_input("函数", "sin(x)*cos(x)")
+    col1, col2, col3 = st.columns([2, 1, 1])
+    with col1:
+        expr_input = st.text_input("函数表达式", "sin(t)*cos(t)")
+    with col2:
+        var_name = st.text_input("自变量", "t")
+    with col3:
+        st.write("")  # 占位
+    
     col1, col2 = st.columns(2)
     with col1:
-        xmin = st.number_input("x最小值", value=-10.0)
+        xmin = st.number_input("最小值", value=-10.0)
     with col2:
-        xmax = st.number_input("x最大值", value=10.0)
+        xmax = st.number_input("最大值", value=10.0)
+    
     symbol_help()
     
     if st.button("绘制"):
         try:
+            var = sp.symbols(var_name)
             expr = sp.sympify(expr_input)
             xv = np.linspace(xmin, xmax, 1000)
-            yv = np.array([float(expr.subs(x, v)) for v in xv])
+            yv = np.array([float(expr.subs(var, v)) for v in xv])
             
             fig, ax = plt.subplots(figsize=(10, 4))
             ax.plot(xv, yv, '#c2185b', linewidth=2)
             ax.axhline(y=0, color='gray', linewidth=0.5, linestyle='--')
             ax.axvline(x=0, color='gray', linewidth=0.5, linestyle='--')
-            ax.set_title(f"f(x) = {expr_input}", color='#333')
+            ax.set_title(f"f({var_name}) = {expr_input}", color='#333')
             ax.grid(True, alpha=0.3)
             st.pyplot(fig)
             
@@ -528,15 +575,6 @@ elif func_type == "函数可视化":
             })
         except Exception as e:
             st.error(f"出错：{e}")
-elif func_type == "函数可视化":
-    st.header("函数图像")
-    
-    col1, col2 = st.columns([2, 1])
-    with col1:
-        expr_input = st.text_input("函数", "sin(t)*cos(t)")
-    with col2:
-        var_name = st.text_input("自变量", "t")
-
 # ==================== 知识点讲解 ====================
 elif func_type == "知识点讲解":
     st.header("知识点")
