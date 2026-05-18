@@ -1,9 +1,11 @@
 import sys
 sys.stdout.reconfigure(encoding='utf-8')
+
 import streamlit as st
 import streamlit.components.v1 as components
 import sympy as sp
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
 import numpy as np
 import requests
 import json
@@ -12,7 +14,19 @@ import json
 st.set_page_config(page_title="数学分析智能助手", page_icon="📐", layout="wide")
 
 import os
-ZHIPU_API_KEY = os.environ.get("ZHIPU_API_KEY", "你的新API_KEY")
+ZHIPU_API_KEY = os.environ.get("ZHIPU_API_KEY", "79a8ecb0f0614dfc94d22a5e102072cc.PcCK8V2eSEdprW4O")
+
+# ==================== 中文字体配置 ====================
+def configure_matplotlib_fonts():
+    preferred_fonts = ["Microsoft YaHei", "SimHei", "SimSun"]
+    available_fonts = {font.name for font in font_manager.fontManager.ttflist}
+    for font_name in preferred_fonts:
+        if font_name in available_fonts:
+            plt.rcParams["font.sans-serif"] = [font_name]
+            break
+    plt.rcParams["axes.unicode_minus"] = False
+
+configure_matplotlib_fonts()
 
 # ==================== 全局样式 ====================
 st.markdown("""
@@ -150,21 +164,20 @@ st.markdown("""
     /* 输入框 */
     .stTextInput input,
     .stNumberInput input {
-        border: 1px solid #e8c5d2 !important;
+        border: none !important;
         border-radius: 10px !important;
         background: #ffffff !important;
         color: #333333 !important;
-        box-shadow: 0 1px 2px rgba(136,14,79,0.04);
-        transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        box-shadow: none !important;
+        transition: box-shadow 0.18s ease;
     }
     .stTextInput input:hover,
     .stNumberInput input:hover {
-        border-color: #c2185b !important;
+        box-shadow: none !important;
     }
     .stTextInput input:focus,
     .stNumberInput input:focus {
-        border-color: #c2185b !important;
-        box-shadow: 0 0 0 3px rgba(194,24,91,0.14) !important;
+        box-shadow: 0 0 0 3px rgba(194,24,91,0.12) !important;
     }
     
     /* 单选按钮 */
@@ -202,6 +215,13 @@ st.markdown("""
     code {
         color: #c2185b !important;
         background: #fff5f7 !important;
+    }
+
+    /* 响应式图像 */
+    [data-testid="stImage"] img,
+    [data-testid="stImage"] canvas {
+        max-width: 100% !important;
+        height: auto !important;
     }
 
 </style>
@@ -447,7 +467,6 @@ def ai_explain(expression, result, context=""):
             },
             timeout=60
         )
-        # 关键：直接取 bytes 再手动 decode，跳过 requests 的自动编码
         raw = response.content
         data = json.loads(raw.decode('utf-8'))
         if "choices" in data:
@@ -465,7 +484,7 @@ def show_ai(text):
     cleaned = cleaned.replace("\\[", "$").replace("\\]", "$")
     cleaned = cleaned.replace("\\(", "$").replace("\\)", "$")
     st.markdown(cleaned, unsafe_allow_html=True)
-    
+
 # ==================== 符号帮助 ====================
 def symbol_help():
     with st.expander("📖 表达式输入规则"):
@@ -499,7 +518,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### ⚙️ 状态")
     
-    if ZHIPU_API_KEY == "你的智谱API_KEY粘贴在这里":
+    if ZHIPU_API_KEY in {"你的智谱API_KEY粘贴在这里", "你的新API_KEY", ""}:
         st.warning("⚠️ 请填写API Key")
     else:
         st.success("✅ AI就绪")
@@ -860,7 +879,7 @@ elif func_type == "函数可视化":
                 ax.set_ylabel("f")
                 ax.set_title(f"f({variables[0]}) = {expr_input}", color='#333')
                 ax.grid(True, alpha=0.3)
-                st.pyplot(fig)
+                st.pyplot(fig, use_container_width=True)
 
             elif len(variables) == 2:
                 xv = np.linspace(xmin, xmax, 220)
@@ -956,17 +975,15 @@ elif func_type == "知识点讲解":
                     json={
                         "model": "glm-4-flash",
                         "messages": [
-                            {"role": "system", "content": "你是数学分析教授。公式用 $...$ 格式。禁止使用emoji。"},
+                            {"role": "system", "content": "你是数学分析教授。公式用 $...$ 格式。"},
                             {"role": "user", "content": question}
                         ],
-                        "max_tokens": 400,
-                        "temperature": 0.7
-                    }, timeout=60
+                        "max_tokens": 400
+                    }, timeout=20
                 )
-                raw = resp.content
-                data = json.loads(raw.decode('utf-8'))
-                answer = data["choices"][0]["message"]["content"]
-                show_ai(answer)
+                answer = resp.json()["choices"][0]["message"]["content"]
+            show_ai(answer)
+
 st.markdown("---")
 st.markdown("<p style='text-align:center;color:#999;'>数学分析智能助手 · Sympy + 智谱AI</p>", unsafe_allow_html=True)
 inject_background_effect()
