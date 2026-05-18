@@ -14,7 +14,7 @@ import json
 st.set_page_config(page_title="数学分析智能助手", page_icon="📐", layout="wide")
 
 import os
-ZHIPU_API_KEY = os.environ.get("ZHIPU_API_KEY", "79a8ecb0f0614dfc94d22a5e102072cc.PcCK8V2eSEdprW4O")
+ZHIPU_API_KEY = os.environ.get("ZHIPU_API_KEY", "请输入您的智谱AI的API密钥")
 
 # ==================== 中文字体配置 ====================
 def configure_matplotlib_fonts():
