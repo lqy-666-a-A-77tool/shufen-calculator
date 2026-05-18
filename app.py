@@ -458,18 +458,14 @@ def ai_explain(expression, result, context=""):
         return f"调用失败：{e}"
 
 def show_ai(text):
-    """用 st.markdown 显示 AI 结果，渲染 $...$ 公式"""
-    # 暴力移除所有可能导致 latin-1 编码错误的字符
-    # 只保留 ASCII 字符和中文汉字
     cleaned = ""
     for ch in text:
         if ord(ch) < 128 or '\u4e00' <= ch <= '\u9fff' or ch in '，。！？；：“”‘’（）【】《》…—\n':
             cleaned += ch
-    # 转换公式格式
     cleaned = cleaned.replace("\\[", "$").replace("\\]", "$")
     cleaned = cleaned.replace("\\(", "$").replace("\\)", "$")
-    st.text(cleaned)
-
+    st.markdown(cleaned, unsafe_allow_html=True)
+    
 # ==================== 符号帮助 ====================
 def symbol_help():
     with st.expander("📖 表达式输入规则"):
